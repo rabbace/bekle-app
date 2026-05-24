@@ -1,15 +1,17 @@
+const CORS_PROXY = 'https://corsproxy.io/?url='
 const YF_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
 
 async function fetchQuote(symbol) {
-  const res = await fetch(`${YF_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=5d`, {
+  const targetUrl = `${YF_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=5d`
+  const res = await fetch(`${CORS_PROXY}${encodeURIComponent(targetUrl)}`, {
     headers: { Accept: 'application/json' },
   })
-  if (!res.ok) throw new Error(`Yahoo Finance HTTP ${res.status} (${symbol})`)
+  if (!res.ok) throw new Error(`HTTP ${res.status} (${symbol})`)
   const json = await res.json()
   const result = json.chart?.result?.[0]
   if (!result) throw new Error(`Veri bulunamadı: ${symbol}`)
   const meta = result.meta
-  const closes = result.indicators?.quote?.[0]?.close?.filter(Boolean) ?? []
+  const closes = result.indicators?.quote?.[0]?.close?.filter(v => v != null) ?? []
   const current = meta.regularMarketPrice ?? closes.at(-1)
   const previous = closes.at(-2) ?? meta.previousClose ?? current
   const change = previous ? ((current - previous) / previous) * 100 : 0
@@ -43,7 +45,7 @@ export async function fetchAllPrices() {
   const errors = [
     usdTry.status === 'rejected' && `USD/TRY: ${usdTry.reason?.message}`,
     eurTry.status === 'rejected' && `EUR/TRY: ${eurTry.reason?.message}`,
-    bist.status === 'rejected'  && `BIST: ${bist.reason?.message}`,
+    bist.status === 'rejected'   && `BIST: ${bist.reason?.message}`,
     xauUsd.status === 'rejected' && `Altın: ${xauUsd.reason?.message}`,
   ].filter(Boolean)
 

@@ -20,10 +20,10 @@ export const SIGNAL_CONFIG = {
 }
 
 export const DEFAULT_INSTRUMENTS = [
-  { id: 'altin', tip: 'Altın', isim: 'Gram Altın', fiyat: '3.142,50 ₺', degisim: '+1.24' },
+  { id: 'altin', tip: 'Altın', isim: 'Gram Altın', fiyat: '3.142,50 ₺', degisim: '1.24' },
   { id: 'usd',   tip: 'USD',   isim: 'Dolar/TL',   fiyat: '38,42 ₺',   degisim: '-0.31' },
-  { id: 'eur',   tip: 'EUR',   isim: 'Euro/TL',     fiyat: '41,85 ₺',   degisim: '+0.15' },
-  { id: 'bist',  tip: 'BIST',  isim: 'BIST 100',    fiyat: '9.876',     degisim: '+0.87' },
+  { id: 'eur',   tip: 'EUR',   isim: 'Euro/TL',     fiyat: '41,85 ₺',   degisim: '0.15' },
+  { id: 'bist',  tip: 'BIST',  isim: 'BIST 100',    fiyat: '9.876',     degisim: '0.87' },
 ]
 
 export function getSignal(isim) {
