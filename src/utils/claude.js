@@ -1,27 +1,28 @@
 const API_URL = 'https://api.anthropic.com/v1/messages'
 
 export async function analyzeWithClaude(apiKey, prices) {
-  const lines = Object.entries(prices)
-    .filter(([, d]) => d !== null)
-    .map(([name, d]) =>
-      `${name}: ${d.current.toFixed(4)} (${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}% günlük)`
-    )
-    .join('\n')
+  const available = Object.entries(prices).filter(([, d]) => d !== null)
+
+  const lines = available.map(([name, d]) => {
+    const changeStr = d.change != null
+      ? ` (${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}% son kontrolden bu yana)`
+      : ''
+    return `${name}: ${d.current.toFixed(4)}${changeStr}`
+  }).join('\n')
+
+  const signalKeys = available.map(([name]) => `    "${name}": "firsat|bekle|dikkat"`).join(',\n')
 
   const prompt = `Sen deneyimli bir Türk finansal analistisin. Aşağıdaki güncel piyasa verilerini analiz et.
 
 Veriler (${new Date().toLocaleDateString('tr-TR')}):
 ${lines}
 
-Türk yatırımcısının bakış açısıyla — enflasyon, TL değer kaybı ve kısa vadeli momentum göz önünde bulundurarak — her enstrüman için sinyal ver.
+Türk yatırımcısının bakış açısıyla — enflasyon, TL değer kaybı ve kısa vadeli momentum göz önünde bulundurarak — yatırım sinyali ver.
 
 Yanıtını YALNIZCA şu JSON formatında ver, başka hiçbir şey yazma:
 {
   "sinyaller": {
-    "Gram Altın": "firsat",
-    "Dolar/TL": "bekle",
-    "Euro/TL": "bekle",
-    "BIST 100": "dikkat"
+${signalKeys}
   },
   "ozet": "Kısa 2-3 cümle Türkçe yorum."
 }
@@ -51,7 +52,6 @@ Geçerli sinyal değerleri: "firsat", "bekle", "dikkat"`
   const data = await res.json()
   const text = data.content?.[0]?.text ?? ''
 
-  // JSON'u metin içinden çıkar (model bazen fazladan karakter ekler)
   const match = text.match(/\{[\s\S]*\}/)
   if (!match) throw new Error('Claude geçersiz yanıt döndürdü')
   return JSON.parse(match[0])
