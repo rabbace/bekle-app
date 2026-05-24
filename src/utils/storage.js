@@ -33,3 +33,14 @@ export function getApiKey() {
 export function saveApiKey(key) {
   localStorage.setItem(API_KEY_KEY, key)
 }
+
+// Son analiz cache — sayfa yenilemede sinyaller değişmesin
+const ANALYSIS_KEY = 'bekle_last_analysis'
+
+export function loadAnalysisCache() {
+  try { return JSON.parse(localStorage.getItem(ANALYSIS_KEY) || 'null') } catch { return null }
+}
+
+export function saveAnalysisCache(data) {
+  localStorage.setItem(ANALYSIS_KEY, JSON.stringify({ ...data, ts: Date.now() }))
+}

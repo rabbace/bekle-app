@@ -3,12 +3,7 @@ const API_URL = 'https://api.anthropic.com/v1/messages'
 export async function analyzeWithClaude(apiKey, prices) {
   const available = Object.entries(prices).filter(([, d]) => d !== null)
 
-  const lines = available.map(([name, d]) => {
-    const changeStr = d.change != null
-      ? ` (${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}% son kontrolden bu yana)`
-      : ''
-    return `${name}: ${d.current.toFixed(4)}${changeStr}`
-  }).join('\n')
+  const lines = available.map(([name, d]) => `${name}: ${d.current.toFixed(4)}`).join('\n')
 
   const signalKeys = available.map(([name]) => `    "${name}": "firsat|bekle|dikkat"`).join(',\n')
 

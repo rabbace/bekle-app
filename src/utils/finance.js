@@ -1,67 +1,52 @@
-// open.er-api.com: ücretsiz, API key yok, CORS destekli
-const ER_API = 'https://open.er-api.com/v6/latest/USD'
-
-// Change hesabı için bir önceki değerleri saklarız
-const CACHE_KEY = 'bekle_rate_cache'
+const ER_API     = 'https://open.er-api.com/v6/latest/USD'
+const METALS_API  = 'https://api.metals.live/v1/spot/gold'
 const TROY_TO_GRAM = 31.1035
 
-function loadCache() {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') } catch { return {} }
-}
-
-function saveCache(data) {
-  localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, ts: Date.now() }))
-}
-
-export async function fetchAllPrices() {
+async function fetchForex() {
   const res = await fetch(ER_API)
   if (!res.ok) throw new Error(`ExchangeRate API hatası: ${res.status}`)
   const data = await res.json()
-  if (data.result !== 'success') throw new Error('ExchangeRate API başarısız yanıt döndürdü')
+  if (data.result !== 'success') throw new Error('ExchangeRate API başarısız yanıt')
+  return data.rates // { TRY: 38.42, EUR: 0.92, ... }
+}
 
-  const rates = data.rates
-  const prev = loadCache()
+async function fetchGoldUsd() {
+  const res = await fetch(METALS_API)
+  if (!res.ok) throw new Error(`Metals API hatası: ${res.status}`)
+  const data = await res.json()
+  // metals.live yanıt formatı: { gold: 2350.50 } ya da [{ gold: 2350.50 }]
+  const price = Array.isArray(data) ? (data[0]?.price ?? data[0]?.gold) : (data.price ?? data.gold)
+  if (!price) throw new Error('Altın fiyatı ayrıştırılamadı')
+  return price // USD per troy oz
+}
 
-  // USD/TRY
-  const usdTry  = rates.TRY
-  // EUR/TRY  (1 EUR = TRY/EUR USD cinsinden)
-  const eurTry  = rates.EUR ? rates.TRY / rates.EUR : null
-  // Gram Altın: rates.XAU = troy oz başına USD, yani 1 USD = rates.XAU oz altın
-  // → 1 oz = 1/rates.XAU USD → gram = (1/rates.XAU * usdTry) / 31.1035
-  const gramAltin = rates.XAU ? (usdTry / rates.XAU) / TROY_TO_GRAM : null
+export async function fetchAllPrices() {
+  const [forexResult, goldResult] = await Promise.allSettled([
+    fetchForex(),
+    fetchGoldUsd(),
+  ])
 
-  function pct(current, prevVal) {
-    if (!current || !prevVal) return null
-    return ((current - prevVal) / prevVal) * 100
+  const rates = forexResult.status === 'fulfilled' ? forexResult.value : null
+  const goldUsd = goldResult.status === 'fulfilled' ? goldResult.value : null
+
+  const usdTry = rates?.TRY ?? null
+  const eurTry = (rates?.TRY && rates?.EUR) ? rates.TRY / rates.EUR : null
+  const gramAltin = (goldUsd && usdTry) ? (goldUsd * usdTry) / TROY_TO_GRAM : null
+
+  const errors = [
+    forexResult.status === 'rejected' && `Kur verisi: ${forexResult.reason?.message}`,
+    goldResult.status  === 'rejected' && `Altın: ${goldResult.reason?.message}`,
+  ].filter(Boolean)
+
+  return {
+    prices: {
+      'Gram Altın': gramAltin != null ? { current: gramAltin, change: null } : null,
+      'Dolar/TL':   usdTry   != null ? { current: usdTry,    change: null } : null,
+      'Euro/TL':    eurTry   != null ? { current: eurTry,    change: null } : null,
+      'BIST 100':   null, // ücretsiz CORS-friendly kaynak yok
+    },
+    errors,
   }
-
-  const prices = {
-    'Gram Altın': gramAltin != null ? {
-      current: gramAltin,
-      change: pct(gramAltin, prev.gramAltin),
-      closes: [],
-    } : null,
-    'Dolar/TL': usdTry != null ? {
-      current: usdTry,
-      change: pct(usdTry, prev.usdTry),
-      closes: [],
-    } : null,
-    'Euro/TL': eurTry != null ? {
-      current: eurTry,
-      change: pct(eurTry, prev.eurTry),
-      closes: [],
-    } : null,
-    'BIST 100': null, // Ücretsiz CORS-friendly kaynak yok, atlanıyor
-  }
-
-  // Sonraki çağrı için önbellek güncelle
-  saveCache({ usdTry, eurTry, gramAltin })
-
-  const errors = []
-  if (!rates.XAU) errors.push('Altın: XAU verisi yok')
-  if (!eurTry)    errors.push('EUR/TL: EUR verisi yok')
-
-  return { prices, errors }
 }
 
 export function formatPrice(name, value) {
