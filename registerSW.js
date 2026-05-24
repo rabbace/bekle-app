@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/bekle-app/sw.js', { scope: '/bekle-app/' })})}
