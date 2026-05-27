@@ -3,7 +3,11 @@ import { getFinnhubKey } from '../utils/storage'
 import { fetchAll, searchSymbol } from '../utils/finnhub'
 import { analyze, fmt, fmtPct, verdictOf } from '../utils/analyzer'
 
-const POPULAR = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META', 'AMD']
+const POPULAR_ABD  = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META', 'AMD']
+const POPULAR_BIST = ['THYAO.IS', 'TUPRS.IS', 'AKBNK.IS', 'GARAN.IS', 'FROTO.IS', 'ISCTR.IS', 'KCHOL.IS', 'SASA.IS', 'ASELS.IS', 'EREGL.IS']
+
+function isBist(symbol) { return symbol?.toUpperCase().endsWith('.IS') }
+function currencySymbol(symbol) { return isBist(symbol) ? '₺' : '$' }
 
 function scoreColor(score) {
   if (score == null) return 'text-slate-400'
@@ -107,9 +111,10 @@ function DimCard({ dim }) {
   )
 }
 
-function RangeBand({ rangePos, hi, lo }) {
+function RangeBand({ rangePos, hi, lo, symbol }) {
   if (rangePos == null || hi == null || lo == null) return null
   const clamped = Math.max(0, Math.min(100, rangePos))
+  const cur = currencySymbol(symbol)
   return (
     <div className="bg-slate-800 rounded-2xl p-4">
       <h3 className="text-white font-semibold text-sm mb-3">52 Haftalık Bant</h3>
@@ -122,8 +127,8 @@ function RangeBand({ rangePos, hi, lo }) {
         />
       </div>
       <div className="flex justify-between mt-1.5">
-        <span className="text-xs text-slate-400">${fmt(lo, 2)} <span className="text-red-400">52H Düşük</span></span>
-        <span className="text-xs text-slate-400"><span className="text-green-400">52H Yüksek</span> ${fmt(hi, 2)}</span>
+        <span className="text-xs text-slate-400">{cur}{fmt(lo, 2)} <span className="text-red-400">52H Düşük</span></span>
+        <span className="text-xs text-slate-400"><span className="text-green-400">52H Yüksek</span> {cur}{fmt(hi, 2)}</span>
       </div>
     </div>
   )
@@ -288,7 +293,7 @@ export default function HisseAnaliz() {
           value={query}
           onChange={handleQueryChange}
           onKeyDown={handleKeyDown}
-          placeholder="Sembol veya şirket ara... (AAPL, TSLA...)"
+          placeholder="Sembol ara... (AAPL, THYAO.IS, GARAN.IS...)"
           className="w-full bg-slate-800 text-white rounded-2xl px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
         />
         <button
@@ -317,16 +322,25 @@ export default function HisseAnaliz() {
       </div>
 
       {/* Popular chips */}
-      <div className="flex flex-wrap gap-2">
-        {POPULAR.map(sym => (
-          <button
-            key={sym}
-            onClick={() => loadSymbol(sym)}
-            className="px-3 py-1.5 bg-slate-700/60 hover:bg-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-mono font-semibold transition-colors"
-          >
-            {sym}
-          </button>
-        ))}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-slate-500 text-xs self-center mr-1">ABD</span>
+          {POPULAR_ABD.map(sym => (
+            <button key={sym} onClick={() => loadSymbol(sym)}
+              className="px-2.5 py-1 bg-slate-700/60 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg text-xs font-mono font-semibold transition-colors">
+              {sym}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-slate-500 text-xs self-center mr-1">BIST</span>
+          {POPULAR_BIST.map(sym => (
+            <button key={sym} onClick={() => loadSymbol(sym)}
+              className="px-2.5 py-1 bg-blue-900/40 hover:bg-blue-800/50 text-blue-300 hover:text-white rounded-lg text-xs font-mono font-semibold transition-colors">
+              {sym.replace('.IS', '')}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Loading */}
@@ -383,7 +397,7 @@ export default function HisseAnaliz() {
                 {quote && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-white font-bold text-lg">
-                      ${fmt(quote.c, 2)}
+                      {currencySymbol(currentSymbol)}{fmt(quote.c, 2)}
                     </span>
                     <span className={`text-sm font-semibold ${
                       (quote.dp ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
@@ -457,7 +471,7 @@ export default function HisseAnaliz() {
           )}
 
           {/* 52-week range */}
-          <RangeBand rangePos={result.rangePos} hi={result.hi} lo={result.lo} />
+          <RangeBand rangePos={result.rangePos} hi={result.hi} lo={result.lo} symbol={currentSymbol} />
 
           {/* Analyst bar */}
           <AnalystBar recDist={result.recDist} />
