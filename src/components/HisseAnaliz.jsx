@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getFinnhubKey } from '../utils/storage'
+import { getFinnhubKey, getApiKey } from '../utils/storage'
 import { fetchAll, searchSymbol } from '../utils/finnhub'
 import { analyze, fmt, fmtPct, verdictOf } from '../utils/analyzer'
+import { commentOnStock } from '../utils/claude'
 
 const POPULAR_ABD  = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META', 'AMD']
 const POPULAR_BIST = ['THYAO.IS', 'TUPRS.IS', 'AKBNK.IS', 'GARAN.IS', 'FROTO.IS', 'ISCTR.IS', 'KCHOL.IS', 'SASA.IS', 'ASELS.IS', 'EREGL.IS']
@@ -192,10 +193,12 @@ export default function HisseAnaliz() {
   const [quote, setQuote] = useState(null)
   const [currentSymbol, setCurrentSymbol] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [claudeComment, setClaudeComment] = useState(null)   // null | 'loading' | string
   const debounceRef = useRef(null)
   const inputRef = useRef(null)
 
   const apiKey = getFinnhubKey()
+  const claudeKey = getApiKey()
 
   const runSearch = useCallback(async (q) => {
     if (!q || q.length < 1) {
@@ -230,6 +233,7 @@ export default function HisseAnaliz() {
     setQuery(symbol)
     setState('loading')
     setCurrentSymbol(symbol)
+    setClaudeComment(null)
     try {
       const { profile: p, quote: q, metrics, recommendations } = await fetchAll(symbol, apiKey)
       const analysisResult = analyze(metrics, q, recommendations)
@@ -237,6 +241,22 @@ export default function HisseAnaliz() {
       setQuote(q)
       setResult(analysisResult)
       setState('result')
+
+      // Kural motoru bitti → Claude yorumunu arka planda al
+      if (claudeKey) {
+        setClaudeComment('loading')
+        commentOnStock(claudeKey, {
+          symbol,
+          companyName: p?.name,
+          overall: analysisResult.overall,
+          verdict: analysisResult.verdict,
+          pros: analysisResult.pros,
+          cons: analysisResult.cons,
+          dims: analysisResult.dims,
+        })
+          .then(text => setClaudeComment(text))
+          .catch(() => setClaudeComment(null))
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Veri alınamadı.')
       setState('error')
@@ -427,6 +447,27 @@ export default function HisseAnaliz() {
               />
             )}
           </div>
+
+          {/* Claude yorumu */}
+          {claudeKey && (
+            <div className="bg-slate-800 rounded-2xl p-4 border border-blue-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Claude Yorumu</span>
+                {claudeComment === 'loading' && (
+                  <span className="inline-block w-3 h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                )}
+              </div>
+              {claudeComment === 'loading' && (
+                <p className="text-slate-500 text-sm">Analiz ediliyor…</p>
+              )}
+              {claudeComment && claudeComment !== 'loading' && (
+                <p className="text-slate-300 text-sm leading-relaxed">{claudeComment}</p>
+              )}
+              {!claudeComment && claudeComment !== 'loading' && (
+                <p className="text-slate-500 text-sm">Yorum alınamadı.</p>
+              )}
+            </div>
+          )}
 
           {/* 6 Dimensions */}
           <div className="bg-slate-800 rounded-2xl p-4">
