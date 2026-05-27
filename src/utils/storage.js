@@ -44,3 +44,7 @@ export function loadAnalysisCache() {
 export function saveAnalysisCache(data) {
   localStorage.setItem(ANALYSIS_KEY, JSON.stringify({ ...data, ts: Date.now() }))
 }
+
+const FINNHUB_KEY = 'bekle_finnhub'
+export function getFinnhubKey() { return localStorage.getItem(FINNHUB_KEY) || '' }
+export function saveFinnhubKey(key) { localStorage.setItem(FINNHUB_KEY, key) }
