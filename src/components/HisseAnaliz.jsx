@@ -194,6 +194,7 @@ export default function HisseAnaliz() {
   const [currentSymbol, setCurrentSymbol] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [claudeComment, setClaudeComment] = useState(null)   // null | 'loading' | string
+  const [dataSource, setDataSource] = useState(null)         // 'finnhub' | 'yahoo'
   const debounceRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -234,8 +235,10 @@ export default function HisseAnaliz() {
     setState('loading')
     setCurrentSymbol(symbol)
     setClaudeComment(null)
+    setDataSource(null)
     try {
-      const { profile: p, quote: q, metrics, recommendations } = await fetchAll(symbol, apiKey)
+      const { profile: p, quote: q, metrics, recommendations, source } = await fetchAll(symbol, apiKey)
+      setDataSource(source)
       const analysisResult = analyze(metrics, q, recommendations)
       setProfile(p)
       setQuote(q)
@@ -447,6 +450,16 @@ export default function HisseAnaliz() {
               />
             )}
           </div>
+
+          {/* BIST kısmi veri uyarısı */}
+          {dataSource === 'yahoo' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-3 flex items-start gap-2">
+              <span className="text-yellow-400 text-base shrink-0">⚠</span>
+              <p className="text-yellow-300/80 text-xs leading-relaxed">
+                Finnhub ücretsiz planı BIST'i desteklemiyor. Fiyat ve teknik veriler Yahoo Finance'den alınıyor — değerleme/kârlılık/büyüme boyutları görünmeyebilir.
+              </p>
+            </div>
+          )}
 
           {/* Claude yorumu */}
           {claudeKey && (
