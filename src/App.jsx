@@ -3,6 +3,7 @@ import TabBar from './components/TabBar'
 import AnaEkran from './components/AnaEkran'
 import Portfoyum from './components/Portfoyum'
 import Ayarlar from './components/Ayarlar'
+import HisseAnaliz from './components/HisseAnaliz'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('ana')
@@ -21,6 +22,7 @@ export default function App() {
         {/* Content */}
         {activeTab === 'ana' && <AnaEkran />}
         {activeTab === 'portfoy' && <Portfoyum />}
+        {activeTab === 'hisse' && <HisseAnaliz />}
         {activeTab === 'ayarlar' && <Ayarlar />}
       </div>
 

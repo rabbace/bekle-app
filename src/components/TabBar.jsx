@@ -1,6 +1,7 @@
 const TABS = [
   { id: 'ana',    label: 'Ana Ekran', icon: '📈' },
   { id: 'portfoy', label: 'Portföyüm', icon: '💼' },
+  { id: 'hisse',  label: 'Hisse',     icon: '📊' },
   { id: 'ayarlar', label: 'Ayarlar',   icon: '⚙️' },
 ]
 
